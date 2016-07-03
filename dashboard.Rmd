@@ -1,0 +1,100 @@
+---
+title: "How are MAP Grants Distributed in Illinois?"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(ggplot2)
+library(plotly)
+library(extrafontdb)
+library(extrafont)
+library(DT)
+Sys.setenv("plotly_username"="ryanburge")
+Sys.setenv("plotly_api_key"="bvzv16do7x")
+map <- read.csv("D:/MAP_Grants/map2.csv", stringsAsFactors = FALSE)
+
+map$Payout <- gsub(',', '', map$Payout)
+map$Payout <- gsub('\\$', '', map$Payout)
+map$Awards <- gsub(',', '', map$Awards)
+map$Awards <- as.numeric(map$Awards)
+map$Payout <- as.numeric(map$Payout)
+map$Payout[is.na(map$Payout)] <- 0
+
+pub <- subset(map, Type == "Public-4 year")
+pub4 <- aggregate(pub$Payout, list(pub$Year), sum)
+pub2 <- subset(map, Type == "Public-2 year")
+pub2 <- aggregate(pub2$Payout, list(pub2$Year), sum)
+priv4 <- subset(map, Type == "Private-4 year")
+priv4 <- aggregate(priv4$Payout, list(priv4$Year), sum)
+priv2 <- subset(map, Type == "Private-2 year")
+priv2 <- aggregate(priv2$Payout, list(priv2$Year), sum)
+hosp <- subset(map, Type == "Hospital Schools")
+hosp <- aggregate(hosp$Payout, list(hosp$Year), sum)
+profit <- subset(map, Type == "For Profit")
+profit <- aggregate(profit$Payout, list(profit$Year), sum)
+
+pub4$Type <- c("Public-4 Year")
+pub2$Type <- c("Public-2 Year")
+priv2$Type <- c("Private-2 Year")
+priv4$Type <- c("Private-4 Year")
+profit$Type <- c("For Profit")
+hosp$Type <- c("Hospital Schools")
+all <- rbind(pub2, pub4, priv2, priv4, profit, hosp)
+all$year <- all$Group.1
+all$Group.1 <- NULL
+all$amount <- all$x
+all$x <- NULL
+
+total <- aggregate(all$amount, list(all$year), sum)
+
+```
+Row 
+-------------------------------------
+
+### MAP Grants Distribution Among 4-year Publics (Interactive)
+
+```{r}
+f <- list(
+family = "Roboto Condensed",
+size = 18,
+color = "#7f7f7f"
+)
+xax <- list(
+title = "Year",
+titlefont = f
+)
+yax <- list(
+title = "Award Amount (in thousands)",
+titlefont = f
+)
+p <- plot_ly(pub, x = Year, y = Payout/1000, name = "Total MAP Amount", color = Abb) %>% layout(xaxis = xax, yaxis = yax)
+p
+```
+
+### Searchable Database (Interactive)
+
+```{r}
+datatable(map)
+```
+
+Row 
+-------------------------------------
+
+### Overall MAP Awards since 2010-2011 (Interactive)
+
+```{r, fig.width=7}
+ggplot(total, aes(x = factor(Group.1), y = x/1000000)) + geom_bar(stat = "identity", fill='firebrick1') + xlab("Year") +ylab("MAP (in millions)")  + theme(text=element_text(size=16, family="Roboto Condensed"))
+ggplotly()
+```
+
+### Distrubtion of MAP Awards across Institution Type (Interactive)
+
+```{r, fig.width=7}
+ggplot(data = all, aes(x = year, y = amount/1000, color = Type, label = Type)) +
+geom_line(aes(group = Type)) + geom_point() +xlab("Year") +ylab("Award Amount (in thousands)") + theme(text=element_text(size=16, family="Roboto Condensed"))
+ggplotly()
+```
+
